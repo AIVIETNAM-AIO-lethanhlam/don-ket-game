@@ -3,7 +3,8 @@
 (function () {
   "use strict";
   var C = window.DONKET_CONFIG;
-  var TOTAL = C.TOTAL_QUESTIONS, QT = C.QUESTION_TIME_SECONDS, MAXA = C.MAX_ATTEMPTS_PER_QUESTION, UNLOCK_Q = C.UNLOCK_AFTER_QUESTION;
+  var ASKABLE = C.INSTRUMENTS.filter(function (i) { return !!i.audio_url; });
+  var TOTAL = Math.min(C.TOTAL_QUESTIONS, ASKABLE.length), QT = C.QUESTION_TIME_SECONDS, MAXA = C.MAX_ATTEMPTS_PER_QUESTION, UNLOCK_Q = C.UNLOCK_AFTER_QUESTION;
   var INSTR = C.INSTRUMENTS.slice().sort(function (a, b) { return a.order_index - b.order_index; });
   var BY_ID = {}; INSTR.forEach(function (i) { BY_ID[i.id] = i; });
   var app = document.getElementById("app");
@@ -275,12 +276,14 @@
   var G = { player: SS.get("don-ket-player", null), game: SS.get("don-ket-game", null) };
   function saveG() { SS.set("don-ket-player", G.player); SS.set("don-ket-game", G.game); }
   function newGame() {
-    var g1 = shuffle(INSTR.filter(function (i) { return i.unlock_group === 1; }));
-    var g2 = shuffle(INSTR.filter(function (i) { return i.unlock_group === 2; }));
-    var order = g1.concat(g2);
+    // câu hỏi: chỉ nhạc cụ có âm thanh; đáp án: hiện đủ các nút nhạc cụ
+    var hasG2 = INSTR.some(function (i) { return i.unlock_group === 2; });
+    var g1 = shuffle(ASKABLE.filter(function (i) { return i.unlock_group !== 2; }));
+    var g2 = shuffle(ASKABLE.filter(function (i) { return i.unlock_group === 2; }));
+    var order = g1.concat(g2).slice(0, TOTAL);
     var qs = order.map(function (ins, i) {
       var n = i + 1;
-      var pool = n <= UNLOCK_Q ? INSTR.filter(function (x) { return x.unlock_group === 1; }) : INSTR;
+      var pool = hasG2 && UNLOCK_Q && n <= UNLOCK_Q ? INSTR.filter(function (x) { return x.unlock_group === 1; }) : INSTR;
       return { question_number: n, instrument_id: ins.id, choice_instrument_ids: shuffle(pool).map(function (x) { return x.id; }), status: "waiting", attempt_count: 0, selected_instrument_ids: [], question_started_at: null, score_awarded: 0 };
     });
     G.game = { attempt: { status: "in_progress", current_question: 1, total_score: 0, correct_count: 0, wrong_count: 0, timeout_count: 0, started_at: new Date().toISOString(), completed_at: null }, questions: qs, submitted: false };
@@ -413,7 +416,7 @@
         body += '<div class="space-y-2 rounded-[24px] border border-background-blue/20 bg-paper/80 p-4"><div class="flex items-center justify-between text-sm text-ink-soft"><span>Tiến trình: câu ' + a.current_question + "/" + TOTAL + '</span><span class="font-semibold text-ink">' + a.total_score + ' điểm</span></div><div data-slot="progress" class="relative w-full overflow-hidden rounded-full bg-primary/20 h-2"><div data-slot="progress-indicator" class="h-full w-full flex-1 bg-primary transition-all" style="transform:translateX(-' + (100 - pct) + '%)"></div></div></div>';
       }
       if (T) body += '<p class="rounded-[24px] bg-gold/15 px-4 py-3 text-center text-sm text-ink">Bạn đã hoàn thành lượt chơi. Chơi lại với cùng tên hoặc bắt đầu với tên khác.</p>';
-      else body += '<section aria-label="Luật chơi" class="relative overflow-hidden rounded-[24px] border border-river-purple/25 bg-gradient-to-br from-lotus-light/35 via-paper-soft/90 to-jade/15 p-4 shadow-[0_10px_28px_-18px_rgba(155,123,234,0.45)] sm:p-5"><div aria-hidden="true" class="pointer-events-none absolute -top-10 -right-8 size-28 rounded-full bg-lotus-pink/20 blur-2xl"></div><div aria-hidden="true" class="pointer-events-none absolute -bottom-12 -left-6 size-24 rounded-full bg-jade/25 blur-2xl"></div><ul class="relative grid gap-2.5 text-sm text-ink"><li class="rounded-2xl border border-white/70 bg-paper-soft/85 px-3 py-3 leading-relaxed backdrop-blur-[2px]">Cùng lắng nghe và khám phá <strong class="font-semibold text-river-purple">10 nhạc cụ</strong>.</li><li class="rounded-2xl border border-white/70 bg-paper-soft/85 px-3 py-3 leading-relaxed backdrop-blur-[2px]">Mỗi câu được thử tối đa <strong class="font-semibold text-jade-dark">3 lần</strong>.</li><li class="rounded-2xl border border-lotus-pink/30 bg-lotus-light/25 px-3 py-3 leading-relaxed backdrop-blur-[2px] ring-1 ring-lotus-pink/15">Đoán càng sớm, điểm càng cao: lần 1 nhận <strong class="font-semibold text-lotus-pink">40 điểm</strong>, lần 2 nhận <strong class="font-semibold text-lotus-pink">30 điểm</strong>, lần 3 nhận <strong class="font-semibold text-lotus-pink">20 điểm</strong> và cộng thêm <strong class="font-semibold text-lotus-pink">2 điểm</strong> cho mỗi giây còn lại.</li></ul></section>';
+      else body += '<section aria-label="Luật chơi" class="relative overflow-hidden rounded-[24px] border border-river-purple/25 bg-gradient-to-br from-lotus-light/35 via-paper-soft/90 to-jade/15 p-4 shadow-[0_10px_28px_-18px_rgba(155,123,234,0.45)] sm:p-5"><div aria-hidden="true" class="pointer-events-none absolute -top-10 -right-8 size-28 rounded-full bg-lotus-pink/20 blur-2xl"></div><div aria-hidden="true" class="pointer-events-none absolute -bottom-12 -left-6 size-24 rounded-full bg-jade/25 blur-2xl"></div><ul class="relative grid gap-2.5 text-sm text-ink"><li class="rounded-2xl border border-white/70 bg-paper-soft/85 px-3 py-3 leading-relaxed backdrop-blur-[2px]">Cùng lắng nghe và khám phá <strong class="font-semibold text-river-purple">' + INSTR.length + ' nhạc cụ</strong>.</li><li class="rounded-2xl border border-white/70 bg-paper-soft/85 px-3 py-3 leading-relaxed backdrop-blur-[2px]">Mỗi câu được thử tối đa <strong class="font-semibold text-jade-dark">3 lần</strong>.</li><li class="rounded-2xl border border-lotus-pink/30 bg-lotus-light/25 px-3 py-3 leading-relaxed backdrop-blur-[2px] ring-1 ring-lotus-pink/15">Đoán càng sớm, điểm càng cao: lần 1 nhận <strong class="font-semibold text-lotus-pink">40 điểm</strong>, lần 2 nhận <strong class="font-semibold text-lotus-pink">30 điểm</strong>, lần 3 nhận <strong class="font-semibold text-lotus-pink">20 điểm</strong> và cộng thêm <strong class="font-semibold text-lotus-pink">2 điểm</strong> cho mỗi giây còn lại.</li></ul></section>';
       if (f) {
         if (T) body += '<div class="flex flex-col gap-3">' + btn({ cls: "w-full", disabled: busy, attrs: 'data-h="replay"', html: icon("play", "size-5") + "Chơi lại" }) + btn({ variant: "secondary", cls: "w-full", disabled: busy, attrs: 'data-h="end"', html: "Bắt đầu với tên khác" }) + btn({ variant: "secondary", cls: "w-full", attrs: 'data-h="result"', html: "Xem kết quả" }) + "</div>";
         else body += '<div class="flex flex-col gap-3">' + btn({ cls: "w-full", disabled: busy, attrs: 'data-h="continue"', html: icon("play", "size-5") + "Tiếp tục chơi" }) + btn({ variant: "secondary", cls: "w-full", disabled: busy, attrs: 'data-h="end"', html: "Đổi tên / người khác" }) + "</div>";
@@ -526,7 +529,7 @@
         '<div class="flex items-center justify-between gap-3"><div class="min-w-0"><p class="font-display text-lg font-bold text-ink sm:text-xl">Câu ' + q.question_number + "/" + TOTAL + "</p>" + badge("mt-1 rounded-full bg-gold/25 text-ink", a.total_score + " điểm") + '</div><div class="flex shrink-0 items-center gap-2 sm:gap-3">' + badge("rounded-full bg-jade/20 text-jade-dark", "Còn " + ex + " lượt") + timerHtml(eb ? null : remaining(q)) + "</div></div>" +
         '<div class="h-3 w-full overflow-hidden rounded-full bg-lotus-pastel" role="progressbar" aria-valuenow="' + q.question_number + '" aria-valuemin="1" aria-valuemax="' + TOTAL + '" aria-label="Tiến độ câu hỏi"><div class="h-full rounded-full bg-lotus-light transition-[width] duration-300" style="width:' + (q.question_number / TOTAL) * 100 + '%"></div></div>' +
         audioPanel(viewStatus(player), player.volume, S.submitting || eb || S.continuing) +
-        '<div class="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">' + opts + "</div>") + "</main>");
+        '<div class="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3' + (ins.length % 3 === 0 ? "" : " lg:grid-cols-4") + '">' + opts + "</div>") + "</main>");
       S.shake = null;
       bindAudio();
       $$("[data-opt]").forEach(function (b) { b.addEventListener("click", function () { select(b.getAttribute("data-opt")); }); });
@@ -591,7 +594,7 @@
       $("#dk-next").addEventListener("click", function () {
         if (S.continuing) return;
         player.stop();
-        if (q.question_number === UNLOCK_Q) { S.revealOpen = false; closeModal(); showUnlock(); return; }
+        if (UNLOCK_Q && q.question_number === UNLOCK_Q && q.question_number < TOTAL) { S.revealOpen = false; closeModal(); showUnlock(); return; }
         cont();
       });
     }
@@ -834,7 +837,7 @@
       if (v) v.addEventListener("input", function () { var n = Number(v.value); mp.setVolume(n); v.style.background = track(n); v.nextElementSibling.textContent = n + "%"; });
     }
     function render() {
-      var H = L ? TOTAL : 0;
+      var H = L ? INSTR.length : 0, hasG2 = INSTR.some(function (i) { return i.unlock_group === 2; });
       var cards = INSTR.map(function (e, i) {
         var s = e.unlock_group === 2, a = !L && s, n = L, l = !!(L && e.fact && n), r = !a;
         return '<article ' + (l ? 'role="button" tabindex="0" data-ins="' + e.id + '" aria-label="Xem đầy đủ thông tin ' + esc(e.name) + '" ' : a ? 'aria-label="Nhạc cụ đang khóa" ' : "") + 'class="paper-card flex flex-col p-3 sm:p-4 dk-up' + (a ? " opacity-80" : "") + (l ? " cursor-pointer focus-ring outline-none transition-shadow hover:shadow-md dk-card-lift" : "") + '" style="animation-delay:' + 0.04 * i + 's">' +
@@ -846,8 +849,8 @@
       }).join("");
       app.innerHTML = page(siteHeader(headerBtn({ attrs: 'data-c="back"', html: icon("arrow-left", "size-4") + "Trở lại" })) +
         '<main class="mx-auto w-full max-w-5xl flex-1 px-4 pb-16">' + folkCard("space-y-5",
-          '<div class="space-y-2"><h1 class="font-display text-3xl font-bold text-ink">Bộ sưu tập nhạc cụ</h1><p class="text-sm text-ink-soft">Đã thu thập ' + H + "/" + TOTAL + " nhạc cụ" + (L ? "" : " · 3 nhạc cụ cuối mở sau câu " + UNLOCK_Q) + "</p></div>" + musicHtml() +
-          (L ? "" : '<p class="rounded-2xl border border-river-purple/20 bg-lotus-light/15 px-4 py-3 text-sm text-ink-soft">Xem trước 7 nhạc cụ đầu. Hoàn thành một lượt chơi để xem chi tiết và mở đủ 10 loại nhạc cụ.</p>') +
+          '<div class="space-y-2"><h1 class="font-display text-3xl font-bold text-ink">Bộ sưu tập nhạc cụ</h1><p class="text-sm text-ink-soft">Đã thu thập ' + H + "/" + INSTR.length + " nhạc cụ" + (L || !hasG2 ? "" : " · 3 nhạc cụ cuối mở sau câu " + UNLOCK_Q) + "</p></div>" + musicHtml() +
+          (L ? "" : '<p class="rounded-2xl border border-river-purple/20 bg-lotus-light/15 px-4 py-3 text-sm text-ink-soft">' + (hasG2 ? "Xem trước 7 nhạc cụ đầu. Hoàn thành một lượt chơi để xem chi tiết và mở đủ " + INSTR.length + " loại nhạc cụ." : "Hoàn thành một lượt chơi để xem chi tiết đủ " + INSTR.length + " loại nhạc cụ.") + '</p>') +
           '<div class="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">' + cards + "</div>") + "</main>");
       bindMusic();
       $('[data-c="back"]').addEventListener("click", function () { if (history.length > 1) history.back(); else go("/"); });
@@ -860,12 +863,11 @@
     function openSheet(e) {
       mp.pause(); sheetIns = e;
       var r = matchMedia("(min-width: 768px)").matches;
-      sheetPlayer = Player(function () { paintSheetAudio(); });
-      sheetPlayer.setVolume(UI.volume); sheetPlayer.load(e.audio_url);
+      if (e.audio_url) { sheetPlayer = Player(function () { paintSheetAudio(); }); sheetPlayer.setVolume(UI.volume); sheetPlayer.load(e.audio_url); }
       openModal('<div class="fixed inset-0 z-50 bg-ink/45 dk-overlay" data-sclose="1"></div><div role="dialog" aria-modal="true" aria-labelledby="dk-sheet-t" class="fixed z-50 flex max-h-[min(96dvh,900px)] w-full max-w-lg flex-col gap-0 overflow-hidden bg-paper-soft outline-none ' + (r ? "top-1/2 left-1/2 max-h-[min(90dvh,860px)] rounded-[28px] border border-jade/20 shadow-2xl dk-sheet-desktop" : "inset-x-0 bottom-0 mx-auto rounded-t-[28px] border border-jade/20 border-b-0 shadow-2xl dk-sheet-mobile") + '">' +
         (r ? "" : '<div class="mx-auto mt-3 h-1.5 w-12 shrink-0 rounded-full bg-ink/15" aria-hidden="true"></div>') +
         '<div class="relative flex items-start justify-between gap-3 px-5 pr-12 pb-2 sm:px-6 ' + (r ? "pt-5" : "pt-3") + '"><div class="min-w-0 space-y-1"><h2 id="dk-sheet-t" class="font-display text-3xl font-bold text-ink sm:text-4xl">' + esc(e.name) + '</h2><p class="sr-only">Thông tin chi tiết về ' + esc(e.name) + '</p></div><button type="button" aria-label="Đóng" data-sclose="1" class="absolute right-4 rounded-full bg-jade/10 p-2 text-ink opacity-80 transition-opacity hover:opacity-100 focus-ring ' + (r ? "top-4" : "top-3") + '">' + icon("x", "size-4") + "</button></div>" +
-        '<div class="overflow-y-auto overscroll-contain px-5 sm:px-6 ' + (r ? "pb-5" : "pb-[max(1.25rem,env(safe-area-inset-bottom))]") + '"><div class="flex flex-col gap-5 pb-3"><div class="relative flex h-64 w-full items-center justify-center overflow-hidden rounded-[26px] bg-jade/10 sm:h-72"><img alt="' + esc(e.name) + '" width="360" height="360" class="h-56 w-auto object-contain sm:h-64" src="' + e.image_url + '"></div><div id="dk-sheet-audio"></div><p class="text-base leading-relaxed text-ink whitespace-pre-wrap sm:text-lg">' + esc(e.fact) + "</p></div></div></div>");
+        '<div class="overflow-y-auto overscroll-contain px-5 sm:px-6 ' + (r ? "pb-5" : "pb-[max(1.25rem,env(safe-area-inset-bottom))]") + '"><div class="flex flex-col gap-5 pb-3"><div class="relative flex h-64 w-full items-center justify-center overflow-hidden rounded-[26px] bg-jade/10 sm:h-72"><img alt="' + esc(e.name) + '" width="360" height="360" class="h-56 w-auto object-contain sm:h-64" src="' + e.image_url + '"></div>' + (e.audio_url ? '<div id="dk-sheet-audio"></div>' : "") + '<p class="text-base leading-relaxed text-ink whitespace-pre-wrap sm:text-lg">' + esc(e.fact) + "</p></div></div></div>");
       paintSheetAudio();
       $$("[data-sclose]").forEach(function (b) { b.addEventListener("click", closeSheet); });
     }
@@ -896,7 +898,7 @@
     function upd() { var b = $("#dk-bootbar"), t = $("#dk-boottxt"); if (b) b.style.width = n + "%"; if (t) t.textContent = txt(); }
     draw();
     var list = [["brand/don_ket_logo_256.png", "image"], ["brand/don_ket_logo_96.png", "image"], [C.BACKGROUNDS.mobile, "image"], [C.BACKGROUNDS.desktop, "image"], [C.SFX.success, "audio"], [C.SFX.fail, "audio"], [C.SFX.leaderboard, "audio"]];
-    INSTR.forEach(function (t) { list.push([t.image_url, "image"], [t.audio_url, "audio"]); });
+    INSTR.forEach(function (t) { list.push([t.image_url, "image"]); if (t.audio_url) list.push([t.audio_url, "audio"]); });
     var total = list.length, cnt = 0, idx = 0, t0 = performance.now();
     function one(it) {
       return it[1] === "image" ? new Promise(function (res) { var im = new Image(); im.decoding = "async"; im.onload = im.onerror = function () { res(); }; im.src = it[0]; })
