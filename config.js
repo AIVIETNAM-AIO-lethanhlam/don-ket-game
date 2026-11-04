@@ -8,6 +8,7 @@ window.DONKET_CONFIG = {
   UNLOCK_AFTER_QUESTION: 7,           // sau câu 7 mở khoá 3 nhạc cụ cuối (chặng Di sản)
   POINTS_BY_ATTEMPT: [40, 30, 20],     // lần 1 / lần 2 / lần 3
   POINTS_PER_SECOND_LEFT: 2,           // cộng thêm cho mỗi giây còn lại
+  LEADERBOARD_REFRESH_SECONDS: 10,     // bảng xếp hạng tự làm mới (giây) — tăng lên 20–30 nếu rất đông người
 
   /* Bảng xếp hạng chung (Supabase) — project "giasuchillchill" */
   supabaseUrl: "https://jtpifktjcgxxbycqswhy.supabase.co",
@@ -53,7 +54,7 @@ window.DONKET_CONFIG = {
     { id: "hoa_tau_dem_xuan_ruc_ro", title: "Hòa tấu — Đêm Xuân Rực Rỡ", audio_url: "audio/collection/hoa_tau_dem_xuan_ruc_ro.mp3" }
   ]
 };
-DONKET_CONFIG.INSTRUMENTS.forEach(function (i) {
+window.DONKET_CONFIG.INSTRUMENTS.forEach(function (i) {
   i.image_url = "instruments/" + i.id + ".png";
   i.audio_url = "audio/" + i.id + ".mp3";
 });

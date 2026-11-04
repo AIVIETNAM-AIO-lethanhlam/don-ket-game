@@ -16,9 +16,14 @@ instruments/ backgrounds/ brand/   hình ảnh
 supabase.sql          cấu trúc database (đã tạo sẵn)
 ```
 
-## Đưa lên Render
-Upload toàn bộ nội dung thư mục này lên GitHub (index.html nằm ở gốc repo),
-Render > Static Site > Build Command để trống > Publish Directory: `./`.
+## Đưa lên Cloudflare Pages (khuyên dùng — không giới hạn băng thông)
+1. Upload toàn bộ nội dung thư mục này lên GitHub (index.html nằm ở gốc repo).
+2. dash.cloudflare.com > Workers & Pages > Create > tab **Pages** > Connect to Git > chọn repo.
+3. Framework preset: None · Build command: để trống · Build output directory: để trống.
+4. Save and Deploy → link dạng https://don-ket-game.pages.dev
+Mỗi lần cập nhật code trên GitHub, Cloudflare tự đưa bản mới lên.
+File `_headers` cho điện thoại lưu sẵn âm thanh/hình ảnh 30 ngày.
+(`vercel.json` chỉ dùng cho Vercel, có thể xoá.)
 
 ## Luật chơi (config.js)
 10 câu · 30 giây/câu (đồng hồ chạy khi bấm nghe) · tối đa 3 lần thử ·

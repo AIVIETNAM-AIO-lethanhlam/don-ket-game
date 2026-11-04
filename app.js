@@ -780,8 +780,12 @@
       }).catch(function () { if (!alive) return; err = true; loading = false; status = "error"; paint(); });
     }
     render(); load(true);
-    var poll = setInterval(function () { if (!document.hidden) load(true); }, 5000);
-    cleanup = function () { alive = false; clearInterval(poll); };
+    // làm mới định kỳ; thêm độ lệch ngẫu nhiên để hàng nghìn máy không gọi máy chủ cùng một lúc
+    var every = Math.max(5, Number(C.LEADERBOARD_REFRESH_SECONDS) || 10) * 1000, poll = null;
+    (function next() { poll = setTimeout(function () { if (!alive) return; (document.hidden ? Promise.resolve() : load(true)).then(next, next); }, every + Math.random() * 3000); })();
+    var onVis = function () { if (!document.hidden && alive) load(true); };
+    document.addEventListener("visibilitychange", onVis);
+    cleanup = function () { alive = false; clearTimeout(poll); document.removeEventListener("visibilitychange", onVis); };
   }
 
   /* ================= BỘ SƯU TẬP ================= */

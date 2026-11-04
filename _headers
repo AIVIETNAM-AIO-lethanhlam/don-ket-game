@@ -1,0 +1,19 @@
+# Cấu hình bộ nhớ đệm cho Cloudflare Pages
+# Âm thanh, hình ảnh, font: cho trình duyệt lưu 30 ngày (khách quay lại không phải tải lại)
+/audio/*
+  Cache-Control: public, max-age=2592000
+/instruments/*
+  Cache-Control: public, max-age=2592000
+/backgrounds/*
+  Cache-Control: public, max-age=2592000
+/brand/*
+  Cache-Control: public, max-age=2592000
+/assets/*
+  Cache-Control: public, max-age=2592000
+/favicon.ico
+  Cache-Control: public, max-age=2592000
+
+# Bảo mật cơ bản cho mọi trang
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
